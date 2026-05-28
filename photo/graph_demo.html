@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 620px;
+                 background-color: #1a1a2e;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::0317303500", "label": "C\u00d4NG TY TNHH ZY", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH ZY"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::L\u1ea0I MINH H\u1ea2I", "label": "L\u1ea0I MINH H\u1ea2I", "shape": "dot", "title": "[Person] L\u1ea0I MINH H\u1ea2I"}, {"color": "#CE93D8", "font": {"color": "white"}, "id": "PROVINCE::Ti\u0309nh An Giang", "label": "Ti\u0309nh An Giang", "shape": "dot", "title": "[Province] Ti\u0309nh An Giang"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::L\u00ca TH\u00c0NH \u0110\u00d4NG", "label": "L\u00ca TH\u00c0NH \u0110\u00d4NG", "shape": "dot", "title": "[Person] L\u00ca TH\u00c0NH \u0110\u00d4NG"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::0202161521", "label": "C\u00d4NG TY TNHH PH\u00c1T TRI\u1ec2N TH\u01af\u01a0NG M\u1ea0..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH PH\u00c1T TRI\u1ec2N TH\u01af\u01a0NG M\u1ea0I D\u1ecaCH V\u1ee4 THU\u1eacN PH\u00daC"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::H\u00c0 V\u0102N QUANG", "label": "H\u00c0 V\u0102N QUANG", "shape": "dot", "title": "[Person] H\u00c0 V\u0102N QUANG"}, {"color": "#A5D6A7", "font": {"color": "white"}, "id": "INDUSTRY::tr\u1ed3ng tr\u1ecdt, ch\u0103n nu\u00f4i h\u1ed7n h\u1ee3p", "label": "tr\u1ed3ng tr\u1ecdt, ch\u0103n nu\u00f4i h\u1ed7n h\u1ee3p", "shape": "dot", "title": "[Industry] tr\u1ed3ng tr\u1ecdt, ch\u0103n nu\u00f4i h\u1ed7n h\u1ee3p"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::0314447977-003", "label": "CHI NH\u00c1NH C\u00d4NG TY TNHH TH\u01af\u01a0NG M\u1ea0I..", "shape": "dot", "title": "[Company] CHI NH\u00c1NH C\u00d4NG TY TNHH TH\u01af\u01a0NG M\u1ea0I HAPPYMART"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1702255000", "label": "C\u00d4NG TY TNHH TI\u1ebeP V\u1eacN M \u0026 P PH\u00da Q..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH TI\u1ebeP V\u1eacN M \u0026 P PH\u00da QU\u1ed0C"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Thi\u0323 tra\u0302\u0301n Va\u0323n Ha\u0300", "label": "Thi\u0323 tra\u0302\u0301n Va\u0323n Ha\u0300", "shape": "dot", "title": "[Ward] Thi\u0323 tra\u0302\u0301n Va\u0323n Ha\u0300"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::3703060209", "label": "C\u00d4NG TY TNHH L\u00c2M THANH TH\u1ea2O", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH L\u00c2M THANH TH\u1ea2O"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::NGUY\u1ec4N XU\u00c2N CHI\u1ebeN", "label": "NGUY\u1ec4N XU\u00c2N CHI\u1ebeN", "shape": "dot", "title": "[Person] NGUY\u1ec4N XU\u00c2N CHI\u1ebeN"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::2803024273", "label": "C\u00d4NG TY TNHH LEONYX", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH LEONYX"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::PH\u1ea0M V\u0102N MINH", "label": "PH\u1ea0M V\u0102N MINH", "shape": "dot", "title": "[Person] PH\u1ea0M V\u0102N MINH"}, {"color": "#CE93D8", "font": {"color": "white"}, "id": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh", "label": "Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh", "shape": "dot", "title": "[Province] Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Xa\u0303 Xua\u0302n \u0110i\u0323nh", "label": "Xa\u0303 Xua\u0302n \u0110i\u0323nh", "shape": "dot", "title": "[Ward] Xa\u0303 Xua\u0302n \u0110i\u0323nh"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::PH\u1ea0M TH\u1eca THANH TH\u1ea2O", "label": "PH\u1ea0M TH\u1eca THANH TH\u1ea2O", "shape": "dot", "title": "[Person] PH\u1ea0M TH\u1eca THANH TH\u1ea2O"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::PH\u1ea0M T\u1ea4N H\u01afNG", "label": "PH\u1ea0M T\u1ea4N H\u01afNG", "shape": "dot", "title": "[Person] PH\u1ea0M T\u1ea4N H\u01afNG"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Ta\u0302n So\u031bn Nha\u0302\u0301t", "label": "Phu\u031bo\u031b\u0300ng Ta\u0302n So\u031bn Nha\u0302\u0301t", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Ta\u0302n So\u031bn Nha\u0302\u0301t"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::8718911405", "label": "L\u00ca TH\u1eca THANH TH\u1ea2O", "shape": "dot", "title": "[Company] L\u00ca TH\u1eca THANH TH\u1ea2O"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::L\u00ca THANH TO\u00c0N", "label": "L\u00ca THANH TO\u00c0N", "shape": "dot", "title": "[Person] L\u00ca THANH TO\u00c0N"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::NGUY\u1ec4N H\u1ed2NG MINH", "label": "NGUY\u1ec4N H\u1ed2NG MINH", "shape": "dot", "title": "[Person] NGUY\u1ec4N H\u1ed2NG MINH"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::3603869860", "label": "C\u00d4NG TY TNHH CHI\u1ebeN V\u01af\u01a0NG", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH CHI\u1ebeN V\u01af\u01a0NG"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::PH\u1ea0M L\u00ca H\u00d9NG", "label": "PH\u1ea0M L\u00ca H\u00d9NG", "shape": "dot", "title": "[Person] PH\u1ea0M L\u00ca H\u00d9NG"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1702254920", "label": "C\u00d4NG TY TNHH WATERWORLD PH\u00da QU\u1ed0C", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH WATERWORLD PH\u00da QU\u1ed0C"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng", "label": "Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Long Xuye\u0302n", "label": "Phu\u031bo\u031b\u0300ng Long Xuye\u0302n", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Long Xuye\u0302n"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::2803024308", "label": "C\u00d4NG TY C\u1ed4 PH\u1ea6N GMT HOA THANH L\u00ca", "shape": "dot", "title": "[Company] C\u00d4NG TY C\u1ed4 PH\u1ea6N GMT HOA THANH L\u00ca"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::2803024146", "label": "C\u00d4NG TY TNHH MSQ 88", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH MSQ 88"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::HO\u00c0NG V\u0102N M\u1ea0NH", "label": "HO\u00c0NG V\u0102N M\u1ea0NH", "shape": "dot", "title": "[Person] HO\u00c0NG V\u0102N M\u1ea0NH"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::2803024259", "label": "C\u00d4NG TY C\u1ed4 PH\u1ea6N N\u00d4NG NGHI\u1ec6P MINH ..", "shape": "dot", "title": "[Company] C\u00d4NG TY C\u1ed4 PH\u1ea6N N\u00d4NG NGHI\u1ec6P MINH \u0110\u1ea0T"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::\u0110\u00c0O HO\u00c0NG THU\u1eacN", "label": "\u0110\u00c0O HO\u00c0NG THU\u1eacN", "shape": "dot", "title": "[Person] \u0110\u00c0O HO\u00c0NG THU\u1eacN"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh", "label": "Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::3703060417", "label": "C\u00d4NG TY TNHH MTV HUA XIN", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH MTV HUA XIN"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Be\u0302\u0301n Tha\u0300nh", "label": "Phu\u031bo\u031b\u0300ng Be\u0302\u0301n Tha\u0300nh", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Be\u0302\u0301n Tha\u0300nh"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::3703060840", "label": "C\u00d4NG TY TR\u00c1CH NHI\u1ec6M H\u1eeeU H\u1ea0N M\u1ed8T T..", "shape": "dot", "title": "[Company] C\u00d4NG TY TR\u00c1CH NHI\u1ec6M H\u1eeeU H\u1ea0N M\u1ed8T TH\u00c0NH VI\u00caN NHUNG TH\u1ecaNH PH\u00c1T MOTOR"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1702254977", "label": "C\u00d4NG TY TNHH TMDV \u0110\u1ea0I ANH - CHB G..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH TMDV \u0110\u1ea0I ANH - CHB GROUP"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::6001740223", "label": "C\u00d4NG TY TNHH \u1ee8NG D\u1ee4NG C\u00d4NG NGH\u1ec6 V..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH \u1ee8NG D\u1ee4NG C\u00d4NG NGH\u1ec6 V\u1ef8 \u0110\u1ea0I PH\u00c1T"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Le\u0302 Cha\u0302n", "label": "Phu\u031bo\u031b\u0300ng Le\u0302 Cha\u0302n", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Le\u0302 Cha\u0302n"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1702255032", "label": "C\u00d4NG TY TNHH T\u01af V\u1ea4N THI\u1ebeT K\u1ebe VH P..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH T\u01af V\u1ea4N THI\u1ebeT K\u1ebe VH PH\u00da QU\u1ed0C"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::HAN ZHELONG", "label": "HAN ZHELONG", "shape": "dot", "title": "[Person] HAN ZHELONG"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1702254938", "label": "C\u00d4NG TY TNHH CUNG \u1ee8NG TH\u1ef0C PH\u1ea8M T..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH CUNG \u1ee8NG TH\u1ef0C PH\u1ea8M TO\u00c0N M\u1ef8"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::\u0110\u1eb6NG HU\u1ef2NH L\u1ec6 THU", "label": "\u0110\u1eb6NG HU\u1ef2NH L\u1ec6 THU", "shape": "dot", "title": "[Person] \u0110\u1eb6NG HU\u1ef2NH L\u1ec6 THU"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::TR\u1ea6N TH\u1eca H\u1ea2I Y\u1ebeN", "label": "TR\u1ea6N TH\u1eca H\u1ea2I Y\u1ebeN", "shape": "dot", "title": "[Person] TR\u1ea6N TH\u1eca H\u1ea2I Y\u1ebeN"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::PH\u1ea0M TH\u1eca B\u00cdCH CHI", "label": "PH\u1ea0M TH\u1eca B\u00cdCH CHI", "shape": "dot", "title": "[Person] PH\u1ea0M TH\u1eca B\u00cdCH CHI"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::2803024266", "label": "C\u00d4NG TY TNHH TM \u0026 DV QUANG V\u0102N", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH TM \u0026 DV QUANG V\u0102N"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh \u0110o\u0302ng", "label": "Phu\u031bo\u031b\u0300ng Bi\u0300nh \u0110o\u0302ng", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Bi\u0300nh \u0110o\u0302ng"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::\u0110\u1eb6NG THANH VI\u1ec6T", "label": "\u0110\u1eb6NG THANH VI\u1ec6T", "shape": "dot", "title": "[Person] \u0110\u1eb6NG THANH VI\u1ec6T"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::1602160034", "label": "C\u00d4NG TY TNHH MUA B\u00c1N PH\u1ee4 T\u00d9NG XE ..", "shape": "dot", "title": "[Company] C\u00d4NG TY TNHH MUA B\u00c1N PH\u1ee4 T\u00d9NG XE C\u01a0 GI\u1edaI THANH VI\u1ec6T"}, {"color": "#CE93D8", "font": {"color": "white"}, "id": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a", "label": "Ti\u0309nh Thanh Ho\u0301a", "shape": "dot", "title": "[Province] Ti\u0309nh Thanh Ho\u0301a"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::L\u00ca TH\u1eca H\u1eacU", "label": "L\u00ca TH\u1eca H\u1eacU", "shape": "dot", "title": "[Person] L\u00ca TH\u1eca H\u1eacU"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c", "label": "\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c", "shape": "dot", "title": "[Ward] \u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"color": "#A5D6A7", "font": {"color": "white"}, "id": "INDUSTRY::cho thu\u00ea thi\u1ebft b\u1ecb th\u1ec3 thao, vui ch\u01a1i gi\u1ea3i tr\u00ed", "label": "cho thu\u00ea thi\u1ebft b\u1ecb th\u1ec3 thao, vui c..", "shape": "dot", "title": "[Industry] cho thu\u00ea thi\u1ebft b\u1ecb th\u1ec3 thao, vui ch\u01a1i gi\u1ea3i tr\u00ed"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::0315881376-001", "label": "CHI NH\u00c1NH C\u00d4NG TY TNHH KIM LO\u1ea0I Y..", "shape": "dot", "title": "[Company] CHI NH\u00c1NH C\u00d4NG TY TNHH KIM LO\u1ea0I YUEXING"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::L\u00ca TH\u1eca THANH TH\u1ea2O", "label": "L\u00ca TH\u1eca THANH TH\u1ea2O", "shape": "dot", "title": "[Person] L\u00ca TH\u1eca THANH TH\u1ea2O"}, {"color": "#FF8A65", "font": {"color": "white"}, "id": "PERSON::NGUY\u1ec4N TH\u1eca MAI", "label": "NGUY\u1ec4N TH\u1eca MAI", "shape": "dot", "title": "[Person] NGUY\u1ec4N TH\u1eca MAI"}, {"color": "#4FC3F7", "font": {"color": "white"}, "id": "COMPANY::0317305113", "label": "C\u00d4NG TY C\u1ed4 PH\u1ea6N SHPETRO", "shape": "dot", "title": "[Company] C\u00d4NG TY C\u1ed4 PH\u1ea6N SHPETRO"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Ho\u0300a Xua\u0302n", "label": "Phu\u031bo\u031b\u0300ng Ho\u0300a Xua\u0302n", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Ho\u0300a Xua\u0302n"}, {"color": "#FFD54F", "font": {"color": "white"}, "id": "WARD::Phu\u031bo\u031b\u0300ng Sa\u0302\u0300m So\u031bn", "label": "Phu\u031bo\u031b\u0300ng Sa\u0302\u0300m So\u031bn", "shape": "dot", "title": "[Ward] Phu\u031bo\u031b\u0300ng Sa\u0302\u0300m So\u031bn"}, {"color": "#A5D6A7", "font": {"color": "white"}, "id": "INDUSTRY::b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y", "label": "b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y", "shape": "dot", "title": "[Industry] b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "COMPANY::0317303500", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::\u0110\u1eb6NG HU\u1ef2NH L\u1ec6 THU"}, {"arrows": "to", "from": "COMPANY::0317303500", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y"}, {"arrows": "to", "from": "COMPANY::0317303500", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::0317303500", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Be\u0302\u0301n Tha\u0300nh"}, {"arrows": "to", "from": "COMPANY::0202161521", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::\u0110\u00c0O HO\u00c0NG THU\u1eacN"}, {"arrows": "to", "from": "COMPANY::0202161521", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y"}, {"arrows": "to", "from": "COMPANY::0202161521", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Le\u0302 Cha\u0302n"}, {"arrows": "to", "from": "COMPANY::0314447977-003", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::PH\u1ea0M L\u00ca H\u00d9NG"}, {"arrows": "to", "from": "COMPANY::0314447977-003", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::0314447977-003", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh \u0110o\u0302ng"}, {"arrows": "to", "from": "COMPANY::1702255000", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::NGUY\u1ec4N H\u1ed2NG MINH"}, {"arrows": "to", "from": "COMPANY::1702255000", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1702255000", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"arrows": "to", "from": "WARD::Thi\u0323 tra\u0302\u0301n Va\u0323n Ha\u0300", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::3703060209", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::PH\u1ea0M TH\u1eca THANH TH\u1ea2O"}, {"arrows": "to", "from": "COMPANY::3703060209", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::3703060209", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng"}, {"arrows": "to", "from": "COMPANY::2803024273", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::L\u00ca TH\u00c0NH \u0110\u00d4NG"}, {"arrows": "to", "from": "COMPANY::2803024273", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::2803024273", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Ta\u0302n So\u031bn Nha\u0302\u0301t", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::8718911405", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::L\u00ca TH\u1eca THANH TH\u1ea2O"}, {"arrows": "to", "from": "COMPANY::8718911405", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::8718911405", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh"}, {"arrows": "to", "from": "COMPANY::3603869860", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::NGUY\u1ec4N XU\u00c2N CHI\u1ebeN"}, {"arrows": "to", "from": "COMPANY::3603869860", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::tr\u1ed3ng tr\u1ecdt, ch\u0103n nu\u00f4i h\u1ed7n h\u1ee3p"}, {"arrows": "to", "from": "COMPANY::3603869860", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Xa\u0303 Xua\u0302n \u0110i\u0323nh"}, {"arrows": "to", "from": "COMPANY::1702254920", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::HO\u00c0NG V\u0102N M\u1ea0NH"}, {"arrows": "to", "from": "COMPANY::1702254920", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::cho thu\u00ea thi\u1ebft b\u1ecb th\u1ec3 thao, vui ch\u01a1i gi\u1ea3i tr\u00ed"}, {"arrows": "to", "from": "COMPANY::1702254920", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1702254920", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Long Xuye\u0302n", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::2803024308", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::L\u00ca TH\u1eca H\u1eacU"}, {"arrows": "to", "from": "COMPANY::2803024308", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::2803024308", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Thi\u0323 tra\u0302\u0301n Va\u0323n Ha\u0300"}, {"arrows": "to", "from": "COMPANY::2803024146", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::NGUY\u1ec4N TH\u1eca MAI"}, {"arrows": "to", "from": "COMPANY::2803024146", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::2803024146", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh"}, {"arrows": "to", "from": "COMPANY::2803024259", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::HO\u00c0NG V\u0102N M\u1ea0NH"}, {"arrows": "to", "from": "COMPANY::2803024259", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::tr\u1ed3ng tr\u1ecdt, ch\u0103n nu\u00f4i h\u1ed7n h\u1ee3p"}, {"arrows": "to", "from": "COMPANY::2803024259", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::2803024259", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Ha\u0323c Tha\u0300nh", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::3703060417", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::PH\u1ea0M V\u0102N MINH"}, {"arrows": "to", "from": "COMPANY::3703060417", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::3703060417", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Be\u0302\u0301n Tha\u0300nh", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::3703060840", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::HO\u00c0NG V\u0102N M\u1ea0NH"}, {"arrows": "to", "from": "COMPANY::3703060840", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y"}, {"arrows": "to", "from": "COMPANY::3703060840", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::3703060840", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng"}, {"arrows": "to", "from": "COMPANY::1702254977", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::PH\u1ea0M TH\u1eca B\u00cdCH CHI"}, {"arrows": "to", "from": "COMPANY::1702254977", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1702254977", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"arrows": "to", "from": "COMPANY::6001740223", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::TR\u1ea6N TH\u1eca H\u1ea2I Y\u1ebeN"}, {"arrows": "to", "from": "COMPANY::6001740223", "label": "LINH_VUC", "title": "LINH_VUC", "to": "INDUSTRY::b\u00e1n m\u00f4 t\u00f4, xe m\u00e1y"}, {"arrows": "to", "from": "COMPANY::6001740223", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ho\u0300a Xua\u0302n"}, {"arrows": "to", "from": "COMPANY::1702255032", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::PH\u1ea0M T\u1ea4N H\u01afNG"}, {"arrows": "to", "from": "COMPANY::1702255032", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1702255032", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"arrows": "to", "from": "COMPANY::1702254938", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::L\u00ca THANH TO\u00c0N"}, {"arrows": "to", "from": "COMPANY::1702254938", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1702254938", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c"}, {"arrows": "to", "from": "COMPANY::2803024266", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::H\u00c0 V\u0102N QUANG"}, {"arrows": "to", "from": "COMPANY::2803024266", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}, {"arrows": "to", "from": "COMPANY::2803024266", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Sa\u0302\u0300m So\u031bn"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh \u0110o\u0302ng", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::1602160034", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::\u0110\u1eb6NG THANH VI\u1ec6T"}, {"arrows": "to", "from": "COMPANY::1602160034", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::1602160034", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Long Xuye\u0302n"}, {"arrows": "to", "from": "WARD::\u0110a\u0323\u0306c khu Phu\u0301 Quo\u0302\u0301c", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Ti\u0309nh An Giang"}, {"arrows": "to", "from": "COMPANY::0315881376-001", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::HAN ZHELONG"}, {"arrows": "to", "from": "COMPANY::0315881376-001", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::0315881376-001", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Bi\u0300nh Du\u031bo\u031bng"}, {"arrows": "to", "from": "COMPANY::0317305113", "label": "DAI_DIEN", "title": "DAI_DIEN", "to": "PERSON::L\u1ea0I MINH H\u1ea2I"}, {"arrows": "to", "from": "COMPANY::0317305113", "label": "TAI_PROVINCE", "title": "TAI_PROVINCE", "to": "PROVINCE::Tha\u0300nh pho\u0302\u0301 Ho\u0302\u0300 Chi\u0301 Minh"}, {"arrows": "to", "from": "COMPANY::0317305113", "label": "TAI_WARD", "title": "TAI_WARD", "to": "WARD::Phu\u031bo\u031b\u0300ng Ta\u0302n So\u031bn Nha\u0302\u0301t"}, {"arrows": "to", "from": "WARD::Phu\u031bo\u031b\u0300ng Sa\u0302\u0300m So\u031bn", "label": "THUOC_PROVINCE", "title": "THUOC_PROVINCE", "to": "PROVINCE::Ti\u0309nh Thanh Ho\u0301a"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
